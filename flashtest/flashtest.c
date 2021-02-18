@@ -6,6 +6,7 @@
 #include "hardware/regs/ssi.h"
 #include "hardware/structs/xip_ctrl.h"
 #include "hardware/structs/ssi.h"
+#include "hardware/sync.h"
 
 #include "flash_data.h"
 
@@ -48,9 +49,7 @@ void flash_stop_dma()
   if (dma_channel_is_busy(flash_dma_chan)) {
     xip_ctrl_hw->stream_ctr = 0;
     dma_channel_abort(flash_dma_chan);
-    //while (ssi_hw->sr & SSI_SR_BUSY_BITS);
-    (void)ssi_hw->sr;
-    //sleep_us(1);  // Transfer reliable if you uncomment this
+    (void)*(io_rw_32*)XIP_NOCACHE_NOALLOC_BASE;
   }
 }
 
@@ -74,6 +73,7 @@ int main()
       while (dma_hw->ch[flash_dma_chan].write_addr < read_end_addr);
 
       // Copy out the beginning of the buffer being DMA'd into 
+      // asm volatile ("dsb"); // works with this uncommented
       memcpy(buff, flash_read_buffer, 16);
 
       // Stop and immediately restart the streaming transfer
